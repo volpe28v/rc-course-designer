@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>ラジコンコースデザイナー</title>
     <style>
         body {
             margin: 0;
             padding: 20px;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #0a0a0f;
             color: #00ff9d;
             background-image: 
@@ -18,6 +19,7 @@
                 linear-gradient(-45deg, transparent 75%, #0a0a0f 75%);
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            overscroll-behavior: none;
         }
 
         .container {
@@ -27,6 +29,11 @@
             gap: 20px;
             position: relative;
             z-index: 1;
+            
+            @media (max-width: 1024px) {
+                flex-direction: column;
+                padding: 10px;
+            }
         }
 
         .container::before {
@@ -43,10 +50,19 @@
 
         .design-area {
             flex: 1;
+            min-height: 60vh;
+            
+            @media (max-width: 1024px) {
+                min-height: 50vh;
+            }
         }
 
         .control-area {
             width: 300px;
+            
+            @media (max-width: 1024px) {
+                width: 100%;
+            }
         }
 
         .course-area {
@@ -59,7 +75,14 @@
                         inset 0 0 20px rgba(0,255,157,0.1);
             border: 1px solid rgba(0,255,157,0.3);
             overflow: auto;
-            min-width: 600px;
+            min-width: 300px;
+            touch-action: none;
+            -webkit-overflow-scrolling: touch;
+            
+            @media (max-width: 1024px) {
+                height: 60vh;
+                min-width: auto;
+            }
         }
 
         .tile {
@@ -79,6 +102,8 @@
             transition: all 0.1s;
             backdrop-filter: blur(5px);
             z-index: 10;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .tile:hover {
@@ -158,6 +183,22 @@
             max-height: calc(100vh - 160px);
             overflow-y: auto;
             border: 1px solid rgba(0,255,157,0.3);
+            
+            @media (max-width: 1024px) {
+                max-height: none;
+            }
+        }
+
+        #savedCoursesList {
+            @media (max-width: 1024px) {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+            }
+
+            @media (max-width: 768px) {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         .course-preview {
@@ -165,12 +206,16 @@
             height: 80px;
             background: rgba(10, 10, 15, 0.9);
             border-radius: 5px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             position: relative;
             overflow: hidden;
             cursor: pointer;
             transition: 0.3s;
             border: 1px solid rgba(0,255,157,0.2);
+            
+            @media (max-width: 1024px) {
+                margin-bottom: 0;
+            }
         }
 
         .course-preview:hover {
@@ -238,6 +283,23 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(0,255,157,0.7);
         }
+
+        /* iPadとタブレット用の調整 */
+        @media (hover: none) and (pointer: coarse) {
+            .tile:hover {
+                transform: none;
+            }
+            
+            .controls button {
+                padding: 12px 20px;
+                font-size: 16px;
+            }
+            
+            input[type="text"] {
+                padding: 12px;
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -254,7 +316,6 @@
                 </div>
             </div>
             <div class="saved-courses">
-                <h3>コースリスト</h3>
                 <div id="savedCoursesList"></div>
             </div>
         </div>
@@ -523,7 +584,7 @@
 
             sortedCourses.forEach(({ name: courseName, data }) => {
                 const courseElement = document.createElement('div');
-                courseElement.style.margin = '20px 0';
+                courseElement.style.margin = '0';
                
                 // プレビューの作成
                 const previewContainer = document.createElement('div');
@@ -639,12 +700,80 @@
             const courseArea = document.getElementById('courseArea');
             courseArea.innerHTML = '';
             selectedTiles.clear();
+            document.getElementById('courseName').value = '';
             createInitialTiles();
         }
 
         // 初期化
         createInitialTiles();
         updateSavedCoursesList();
+
+        // タッチイベントの処理
+        let lastTap = 0;
+        
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.classList.contains('tile')) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                draggedTile = e.target;
+                const pos = getTilePosition(draggedTile, touch.clientX, touch.clientY);
+                offsetX = pos.x;
+                offsetY = pos.y;
+                draggedTile.classList.add('dragging');
+                
+                // ダブルタップ検出
+                const now = Date.now();
+                if (now - lastTap < 300) {
+                    const currentRotation = parseInt(draggedTile.dataset.rotation) || 0;
+                    const newRotation = (currentRotation + 90) % 360;
+                    draggedTile.style.transform = `rotate(${newRotation}deg)`;
+                    draggedTile.dataset.rotation = newRotation;
+                    draggedTile = null;
+                }
+                lastTap = now;
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            if (draggedTile) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                
+                if (!isDragging) {
+                    isDragging = true;
+                    if (!draggedTile.classList.contains('selected')) {
+                        document.querySelectorAll('.tile.selected').forEach(tile => {
+                            tile.classList.remove('selected');
+                        });
+                        selectedTiles.clear();
+                    }
+                    draggedTile.classList.add('selected');
+                    selectedTiles.add(draggedTile);
+                }
+
+                const courseArea = document.getElementById('courseArea');
+                const rect = courseArea.getBoundingClientRect();
+                const newX = touch.clientX - rect.left - offsetX;
+                const newY = touch.clientY - rect.top - offsetY;
+
+                selectedTiles.forEach(tile => {
+                    const offsetX = parseInt(tile.dataset.offsetX || 0);
+                    const offsetY = parseInt(tile.dataset.offsetY || 0);
+                    const newLeft = Math.max(0, Math.min(newX + offsetX, rect.width - tile.offsetWidth));
+                    const newTop = Math.max(0, Math.min(newY + offsetY, rect.height - tile.offsetHeight));
+                    tile.style.left = `${newLeft}px`;
+                    tile.style.top = `${newTop}px`;
+                });
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', () => {
+            if (draggedTile && isDragging) {
+                draggedTile.classList.remove('dragging');
+                draggedTile = null;
+                isDragging = false;
+            }
+        });
     </script>
 </body>
 </html> 
