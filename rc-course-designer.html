@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ラジコンコース設計ツール</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .design-area {
+            flex: 1;
+        }
+
+        .control-area {
+            width: 300px;
+        }
+
+        .course-area {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            height: calc(100vh - 40px);
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: auto;
+            min-width: 600px;
+        }
+
+        .tile {
+            width: 120px;
+            height: 90px;
+            background: #00979d;
+            border: 2px solid #007a7c;
+            border-radius: 5px;
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: box-shadow 0.3s, transform 0.3s;
+            z-index: 1;
+        }
+
+        .tile:hover {
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+
+        .tile.dragging {
+            opacity: 0.8;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            flex-direction: column;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex: 1;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #00979d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #007a7c;
+        }
+
+        .reset-button {
+            background: #ff6b6b;
+        }
+
+        .reset-button:hover {
+            background: #ff5252;
+        }
+
+        .saved-courses {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+        }
+
+        .saved-courses h3 {
+            margin-top: 0;
+        }
+
+        .selection-box {
+            position: absolute;
+            border: 2px dashed #00979d;
+            background: rgba(0, 151, 157, 0.1);
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .tile.selected {
+            border: 2px solid #ff6b6b;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="design-area">
+            <div class="course-area" id="courseArea"></div>
+        </div>
+        <div class="control-area">
+            <div class="controls">
+                <input type="text" id="courseName" placeholder="コース名を入力">
+                <button onclick="saveCourse()">保存</button>
+                <button onclick="resetTiles()" class="reset-button">初期化</button>
+            </div>
+            <div class="saved-courses">
+                <h3>保存済みコース</h3>
+                <div id="savedCoursesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let draggedTile = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let startTime = 0;
+        let isSelecting = false;
+        let selectionStart = { x: 0, y: 0 };
+        let selectionBox = null;
+        let selectedTiles = new Set();
+
+        // タイルの実際の位置を計算する関数
+        function getTilePosition(tile, clientX, clientY) {
+            const rect = tile.getBoundingClientRect();
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        // 選択範囲の作成
+        function createSelectionBox(e) {
+            if (!selectionBox) {
+                selectionBox = document.createElement('div');
+                selectionBox.className = 'selection-box';
+                document.getElementById('courseArea').appendChild(selectionBox);
+            }
+            const rect = document.getElementById('courseArea').getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const left = Math.min(x, selectionStart.x);
+            const top = Math.min(y, selectionStart.y);
+            const width = Math.abs(x - selectionStart.x);
+            const height = Math.abs(y - selectionStart.y);
+            
+            selectionBox.style.left = `${left}px`;
+            selectionBox.style.top = `${top}px`;
+            selectionBox.style.width = `${width}px`;
+            selectionBox.style.height = `${height}px`;
+        }
+
+        // タイルが選択範囲内にあるかチェック
+        function isInSelection(tile, selectionRect) {
+            const tileRect = tile.getBoundingClientRect();
+            const courseRect = document.getElementById('courseArea').getBoundingClientRect();
+            
+            const tileLeft = tileRect.left - courseRect.left;
+            const tileTop = tileRect.top - courseRect.top;
+            
+            return !(tileLeft + tileRect.width < selectionRect.left ||
+                    tileLeft > selectionRect.left + selectionRect.width ||
+                    tileTop + tileRect.height < selectionRect.top ||
+                    tileTop > selectionRect.top + selectionRect.height);
+        }
+
+        // 初期タイルの作成
+        function createInitialTiles() {
+            const courseArea = document.getElementById('courseArea');
+            const areaWidth = courseArea.clientWidth;
+            const areaHeight = courseArea.clientHeight;
+            const tileWidth = 120;
+            const tileHeight = 90;
+            const tilesPerRow = Math.floor(areaWidth / (tileWidth + 10));
+            const margin = 20;
+
+            for (let i = 0; i < 10; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                // タイルの位置を計算
+                const row = Math.floor(i / tilesPerRow);
+                const col = i % tilesPerRow;
+                tile.style.left = `${margin + col * (tileWidth + 10)}px`;
+                tile.style.top = `${margin + row * (tileHeight + 10)}px`;
+                tile.dataset.rotation = '0';
+
+                // ドラッグ開始時の処理
+                tile.addEventListener('mousedown', (e) => {
+                    // 既に選択されているタイルをクリックした場合は選択を維持
+                    if (!e.ctrlKey && !tile.classList.contains('selected')) {
+                        selectedTiles.clear();
+                        document.querySelectorAll('.tile.selected').forEach(t => {
+                            t.classList.remove('selected');
+                        });
+                    }
+                    startTime = Date.now();
+                    isDragging = false;
+                    draggedTile = tile;
+                    const pos = getTilePosition(tile, e.clientX, e.clientY);
+                    offsetX = pos.x;
+                    offsetY = pos.y;
+                    tile.classList.add('dragging');
+                    tile.classList.add('selected');
+                    selectedTiles.add(tile);
+                    e.stopPropagation();
+                });
+
+                // クリック時の回転処理
+                tile.addEventListener('click', (e) => {
+                    if (!isDragging) {
+                        const currentRotation = parseInt(tile.dataset.rotation) || 0;
+                        const newRotation = (currentRotation + 90) % 360;
+                        tile.style.transform = `rotate(${newRotation}deg)`;
+                        tile.dataset.rotation = newRotation;
+                    }
+                });
+
+                courseArea.appendChild(tile);
+            }
+
+            // コースエリアのマウスイベント
+            courseArea.addEventListener('mousedown', (e) => {
+                if (e.target === courseArea) {
+                    isSelecting = true;
+                    const rect = courseArea.getBoundingClientRect();
+                    selectionStart = {
+                        x: e.clientX - rect.left,
+                        y: e.clientY - rect.top
+                    };
+                    if (!e.ctrlKey) {
+                        selectedTiles.clear();
+                        document.querySelectorAll('.tile.selected').forEach(t => {
+                            t.classList.remove('selected');
+                        });
+                    }
+                }
+            });
+        }
+
+        // ドラッグ中の処理
+        document.addEventListener('mousemove', (e) => {
+            if (isSelecting) {
+                createSelectionBox(e);
+                const rect = selectionBox.getBoundingClientRect();
+                const courseRect = document.getElementById('courseArea').getBoundingClientRect();
+                const selectionRect = {
+                    left: rect.left - courseRect.left,
+                    top: rect.top - courseRect.top,
+                    width: rect.width,
+                    height: rect.height
+                };
+                
+                document.querySelectorAll('.tile').forEach(tile => {
+                    if (isInSelection(tile, selectionRect)) {
+                        tile.classList.add('selected');
+                        selectedTiles.add(tile);
+                    } else if (!e.ctrlKey) {
+                        tile.classList.remove('selected');
+                        selectedTiles.delete(tile);
+                    }
+                });
+            }
+
+            if (draggedTile) {
+                // ドラッグ判定（5px以上の移動でドラッグと判断）
+                if (!isDragging && 
+                    (Math.abs(e.clientX - offsetX) > 5 || 
+                     Math.abs(e.clientY - offsetY) > 5)) {
+                    isDragging = true;
+                    // ドラッグ開始時の位置を記録
+                    draggedTile.dataset.startX = e.clientX;
+                    draggedTile.dataset.startY = e.clientY;
+                }
+
+                const courseArea = document.getElementById('courseArea');
+                const rect = courseArea.getBoundingClientRect();
+                
+                // マウスの移動量を計算
+                const deltaX = e.clientX - parseInt(draggedTile.dataset.startX);
+                const deltaY = e.clientY - parseInt(draggedTile.dataset.startY);
+
+                // 選択されたタイルすべてを移動
+                selectedTiles.forEach(tile => {
+                    const currentLeft = parseInt(tile.style.left);
+                    const currentTop = parseInt(tile.style.top);
+                    
+                    // 新しい位置を計算（範囲制限付き）
+                    const newLeft = Math.max(0, Math.min(currentLeft + deltaX, rect.width - tile.offsetWidth));
+                    const newTop = Math.max(0, Math.min(currentTop + deltaY, rect.height - tile.offsetHeight));
+                    
+                    tile.style.left = `${newLeft}px`;
+                    tile.style.top = `${newTop}px`;
+                });
+
+                // 次回の移動量計算用に現在位置を更新
+                draggedTile.dataset.startX = e.clientX;
+                draggedTile.dataset.startY = e.clientY;
+            }
+        });
+
+        // ドラッグ終了時の処理
+        document.addEventListener('mouseup', () => {
+            if (draggedTile) {
+                draggedTile.classList.remove('dragging');
+                draggedTile = null;
+            }
+            if (isSelecting) {
+                isSelecting = false;
+                if (selectionBox) {
+                    selectionBox.remove();
+                    selectionBox = null;
+                }
+            }
+        });
+
+        // コースの保存
+        function saveCourse() {
+            const courseName = document.getElementById('courseName').value;
+            if (!courseName) {
+                alert('コース名を入力してください');
+                return;
+            }
+
+            const tiles = document.querySelectorAll('.tile');
+            const tilePositions = Array.from(tiles).map(tile => ({
+                left: tile.style.left,
+                top: tile.style.top,
+                rotation: tile.dataset.rotation || '0'
+            }));
+
+            const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
+            savedCourses[courseName] = tilePositions;
+            localStorage.setItem('rcCourses', JSON.stringify(savedCourses));
+
+            updateSavedCoursesList();
+            alert('コースを保存しました');
+        }
+
+        // 保存済みコースの一覧を更新
+        function updateSavedCoursesList() {
+            const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
+            const listElement = document.getElementById('savedCoursesList');
+            listElement.innerHTML = '';
+
+            Object.keys(savedCourses).forEach(courseName => {
+                const courseElement = document.createElement('div');
+                courseElement.style.margin = '10px 0';
+                courseElement.innerHTML = `
+                    <span>${courseName}</span>
+                    <button onclick="loadSpecificCourse('${courseName}')" style="margin-left: 10px">読み込み</button>
+                    <button onclick="deleteCourse('${courseName}')" style="margin-left: 10px">削除</button>
+                `;
+                listElement.appendChild(courseElement);
+            });
+        }
+
+        // 特定のコースを読み込む
+        function loadSpecificCourse(courseName) {
+            const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
+            const courseData = savedCourses[courseName];
+            
+            if (courseData) {
+                const courseArea = document.getElementById('courseArea');
+                courseArea.innerHTML = '';
+                
+                courseData.forEach((tileData, index) => {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    tile.style.left = tileData.left;
+                    tile.style.top = tileData.top;
+                    tile.dataset.rotation = tileData.rotation || '0';
+                    tile.style.transform = `rotate(${tileData.rotation || 0}deg)`;
+
+                    tile.addEventListener('mousedown', (e) => {
+                        // 既に選択されているタイルをクリックした場合は選択を維持
+                        if (!e.ctrlKey && !tile.classList.contains('selected')) {
+                            selectedTiles.clear();
+                            document.querySelectorAll('.tile.selected').forEach(t => {
+                                t.classList.remove('selected');
+                            });
+                        }
+                        startTime = Date.now();
+                        isDragging = false;
+                        draggedTile = tile;
+                        const pos = getTilePosition(tile, e.clientX, e.clientY);
+                        offsetX = pos.x;
+                        offsetY = pos.y;
+                        tile.classList.add('dragging');
+                        tile.classList.add('selected');
+                        selectedTiles.add(tile);
+                        e.stopPropagation();
+                    });
+
+                    // クリック時の回転処理
+                    tile.addEventListener('click', (e) => {
+                        if (!isDragging) {
+                            const currentRotation = parseInt(tile.dataset.rotation) || 0;
+                            const newRotation = (currentRotation + 90) % 360;
+                            tile.style.transform = `rotate(${newRotation}deg)`;
+                            tile.dataset.rotation = newRotation;
+                        }
+                    });
+
+                    courseArea.appendChild(tile);
+                });
+
+                document.getElementById('courseName').value = courseName;
+            }
+        }
+
+        // コースの削除
+        function deleteCourse(courseName) {
+            if (confirm(`${courseName}を削除してもよろしいですか？`)) {
+                const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
+                delete savedCourses[courseName];
+                localStorage.setItem('rcCourses', JSON.stringify(savedCourses));
+                updateSavedCoursesList();
+            }
+        }
+
+        // タイルを初期位置に戻す
+        function resetTiles() {
+            const courseArea = document.getElementById('courseArea');
+            courseArea.innerHTML = '';
+            selectedTiles.clear();
+            createInitialTiles();
+        }
+
+        // 初期化
+        createInitialTiles();
+        updateSavedCoursesList();
+    </script>
+</body>
+</html> 

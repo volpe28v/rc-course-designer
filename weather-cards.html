@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天気カード</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .weather-card {
+            width: 200px;
+            height: 300px;
+            background: #2a2a2a;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        /* 太陽のアニメーション */
+        .sun-card {
+            background: linear-gradient(45deg, #ff8c00, #ffd700);
+        }
+
+        .sun {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 50px #fff;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 50px #fff; }
+            to { box-shadow: 0 0 80px #fff; }
+        }
+
+        /* 雨のアニメーション */
+        .rain-card {
+            background: linear-gradient(45deg, #4a4a4a, #2a2a2a);
+        }
+
+        .raindrop {
+            position: absolute;
+            width: 2px;
+            height: 20px;
+            background: #fff;
+            opacity: 0.6;
+            animation: rain 1s linear infinite;
+        }
+
+        @keyframes rain {
+            0% { transform: translateY(-20px); }
+            100% { transform: translateY(300px); }
+        }
+
+        /* 雪のアニメーション */
+        .snow-card {
+            background: linear-gradient(45deg, #3f4c6b, #606c88);
+        }
+
+        .snowflake {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #fff;
+            border-radius: 50%;
+            animation: snow 3s linear infinite;
+        }
+
+        @keyframes snow {
+            0% {
+                transform: translateY(-10px) rotate(0deg);
+            }
+            100% {
+                transform: translateY(300px) rotate(360deg);
+            }
+        }
+
+        /* 風のアニメーション */
+        .wind-card {
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+        }
+
+        .wind-line {
+            position: absolute;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+            animation: wind 2s linear infinite;
+        }
+
+        @keyframes wind {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(300%); }
+        }
+
+        .weather-title {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .control-btn:hover {
+            background: #2980b9;
+        }
+
+        .weather-card {
+            transition: 0.5s;
+            transform: scale(1);
+        }
+
+        .weather-card.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255,255,255,0.2);
+        }
+
+        /* 雲のアニメーション追加 */
+        .cloud {
+            position: absolute;
+            background: rgba(255,255,255,0.8);
+            border-radius: 20px;
+            animation: float 4s infinite ease-in-out;
+        }
+
+        .cloud:before {
+            content: '';
+            position: absolute;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button class="control-btn" onclick="toggleAnimation('all')">全て表示</button>
+        <button class="control-btn" onclick="toggleAnimation('sun')">晴れ</button>
+        <button class="control-btn" onclick="toggleAnimation('rain')">雨</button>
+        <button class="control-btn" onclick="toggleAnimation('snow')">雪</button>
+        <button class="control-btn" onclick="toggleAnimation('wind')">風</button>
+    </div>
+
+    <div class="container">
+        <div class="weather-card sun-card">
+            <div class="sun"></div>
+            <div class="weather-title">晴れ</div>
+        </div>
+
+        <div class="weather-card rain-card">
+            <div class="weather-title">雨</div>
+        </div>
+
+        <div class="weather-card snow-card">
+            <div class="weather-title">雪</div>
+        </div>
+
+        <div class="weather-card wind-card">
+            <div class="weather-title">風</div>
+        </div>
+    </div>
+
+    <script>
+        // 雨のアニメーション生成
+        const rainCard = document.querySelector('.rain-card');
+        for (let i = 0; i < 20; i++) {
+            const raindrop = document.createElement('div');
+            raindrop.className = 'raindrop';
+            raindrop.style.left = `${Math.random() * 100}%`;
+            raindrop.style.animationDelay = `${Math.random() * 2}s`;
+            rainCard.appendChild(raindrop);
+        }
+
+        // 雪のアニメーション生成
+        const snowCard = document.querySelector('.snow-card');
+        for (let i = 0; i < 20; i++) {
+            const snowflake = document.createElement('div');
+            snowflake.className = 'snowflake';
+            snowflake.style.left = `${Math.random() * 100}%`;
+            snowflake.style.animationDelay = `${Math.random() * 3}s`;
+            snowCard.appendChild(snowflake);
+        }
+
+        // 風のアニメーション生成
+        const windCard = document.querySelector('.wind-card');
+        for (let i = 0; i < 5; i++) {
+            const windLine = document.createElement('div');
+            windLine.className = 'wind-line';
+            windLine.style.top = `${30 + (i * 50)}px`;
+            windLine.style.width = `${50 + Math.random() * 50}px`;
+            windLine.style.animationDelay = `${Math.random() * 2}s`;
+            windCard.appendChild(windLine);
+        }
+
+        // 雲の追加
+        function addClouds(card) {
+            for (let i = 0; i < 3; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                cloud.style.width = `${40 + Math.random() * 40}px`;
+                cloud.style.height = '20px';
+                cloud.style.top = `${20 + (i * 40)}px`;
+                cloud.style.left = `${Math.random() * 100}px`;
+                cloud.style.animationDelay = `${Math.random() * 2}s`;
+                card.appendChild(cloud);
+            }
+        }
+
+        // 風カードに雲を追加
+        addClouds(document.querySelector('.wind-card'));
+
+        // アニメーション切り替え関数
+        function toggleAnimation(type) {
+            const cards = document.querySelectorAll('.weather-card');
+            cards.forEach(card => {
+                card.classList.remove('active');
+                if (type === 'all') {
+                    card.style.display = 'block';
+                } else {
+                    if (card.classList.contains(`${type}-card`)) {
+                        card.style.display = 'block';
+                        card.classList.add('active');
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // アニメーションの自動再生成
+        function regenerateAnimations() {
+            setInterval(() => {
+                document.querySelectorAll('.raindrop, .snowflake, .wind-line').forEach(el => el.remove());
+                
+                // 雨のアニメーション再生成
+                const rainCard = document.querySelector('.rain-card');
+                for (let i = 0; i < 20; i++) {
+                    const raindrop = document.createElement('div');
+                    raindrop.className = 'raindrop';
+                    raindrop.style.left = `${Math.random() * 100}%`;
+                    raindrop.style.animationDelay = `${Math.random() * 2}s`;
+                    rainCard.appendChild(raindrop);
+                }
+
+                // 雪のアニメーション再生成
+                const snowCard = document.querySelector('.snow-card');
+                for (let i = 0; i < 20; i++) {
+                    const snowflake = document.createElement('div');
+                    snowflake.className = 'snowflake';
+                    snowflake.style.left = `${Math.random() * 100}%`;
+                    snowflake.style.animationDelay = `${Math.random() * 3}s`;
+                    snowCard.appendChild(snowflake);
+                }
+
+                // 風のアニメーション再生成
+                const windCard = document.querySelector('.wind-card');
+                for (let i = 0; i < 5; i++) {
+                    const windLine = document.createElement('div');
+                    windLine.className = 'wind-line';
+                    windLine.style.top = `${30 + (i * 50)}px`;
+                    windLine.style.width = `${50 + Math.random() * 50}px`;
+                    windLine.style.animationDelay = `${Math.random() * 2}s`;
+                    windCard.appendChild(windLine);
+                }
+            }, 10000); // 10秒ごとに再生成
+        }
+
+        // アニメーションの自動再生成を開始
+        regenerateAnimations();
+    </script>
+</body>
+</html> 
