@@ -76,9 +76,9 @@
             justify-content: center;
             color: white;
             font-weight: bold;
-            transition: all 0.3s;
+            transition: all 0.1s;
             backdrop-filter: blur(5px);
-            z-index: 1;
+            z-index: 10;
         }
 
         .tile:hover {
@@ -88,7 +88,8 @@
 
         .tile.dragging {
             opacity: 0.8;
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            box-shadow: 0 0 20px rgba(0,255,157,0.3);
+            z-index: 1000;
         }
 
         .controls {
@@ -212,6 +213,7 @@
         .tile.selected {
             border: 2px solid rgba(0,255,157,0.8);
             box-shadow: 0 0 20px rgba(0,255,157,0.5);
+            z-index: 100;
         }
 
         /* スクロールバーのカスタマイズ */
@@ -319,8 +321,9 @@
             const tileHeight = 90;
             const tilesPerRow = Math.floor(areaWidth / (tileWidth + 10));
             const margin = 20;
+            const tailCount = 12;
 
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < tailCount; i++) {
                 const tile = document.createElement('div');
                 tile.className = 'tile';
                 // タイルの位置を計算
@@ -412,32 +415,37 @@
                     (Math.abs(e.clientX - offsetX) > 1 || 
                      Math.abs(e.clientY - offsetY) > 1)) {
                     isDragging = true;
-                    draggedTile.dataset.startX = e.clientX;
-                    draggedTile.dataset.startY = e.clientY;
+                    // 初期オフセットを記録
+                    const rect = document.getElementById('courseArea').getBoundingClientRect();
+                    draggedTile.dataset.initialX = e.clientX - rect.left;
+                    draggedTile.dataset.initialY = e.clientY - rect.top;
+                    
+                    // 各タイルの相対位置を記録
+                    selectedTiles.forEach(tile => {
+                        tile.dataset.offsetX = parseInt(tile.style.left) - parseInt(draggedTile.style.left);
+                        tile.dataset.offsetY = parseInt(tile.style.top) - parseInt(draggedTile.style.top);
+                    });
                 }
 
                 if (isDragging) {
                     const courseArea = document.getElementById('courseArea');
                     const rect = courseArea.getBoundingClientRect();
-                    const deltaX = e.clientX - parseInt(draggedTile.dataset.startX);
-                    const deltaY = e.clientY - parseInt(draggedTile.dataset.startY);
+                    // マウス位置から直接新しい位置を計算
+                    const newX = e.clientX - rect.left - offsetX;
+                    const newY = e.clientY - rect.top - offsetY;
 
                     // 選択されたタイルすべてを移動
                     selectedTiles.forEach(tile => {
-                        const currentLeft = parseInt(tile.style.left);
-                        const currentTop = parseInt(tile.style.top);
+                        const offsetX = parseInt(tile.dataset.offsetX || 0);
+                        const offsetY = parseInt(tile.dataset.offsetY || 0);
                         
                         // 新しい位置を計算（範囲制限付き）
-                        const newLeft = Math.max(0, Math.min(currentLeft + deltaX, rect.width - tile.offsetWidth));
-                        const newTop = Math.max(0, Math.min(currentTop + deltaY, rect.height - tile.offsetHeight));
+                        const newLeft = Math.max(0, Math.min(newX + offsetX, rect.width - tile.offsetWidth));
+                        const newTop = Math.max(0, Math.min(newY + offsetY, rect.height - tile.offsetHeight));
                         
                         tile.style.left = `${newLeft}px`;
                         tile.style.top = `${newTop}px`;
                     });
-
-                    // 次回の移動量計算用に現在位置を更新
-                    draggedTile.dataset.startX = e.clientX;
-                    draggedTile.dataset.startY = e.clientY;
                 }
             }
         });
@@ -446,6 +454,11 @@
         document.addEventListener('mouseup', () => {
             if (draggedTile) {
                 draggedTile.classList.remove('dragging');
+                // ドラッグ終了後も選択状態は維持
+                if (!draggedTile.classList.contains('selected')) {
+                    draggedTile.classList.add('selected');
+                    selectedTiles.add(draggedTile);
+                }
                 draggedTile = null;
             }
             if (isSelecting) {
