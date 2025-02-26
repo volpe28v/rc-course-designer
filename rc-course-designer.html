@@ -122,6 +122,28 @@
             margin-bottom: 10px;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .course-preview:hover {
+            background: #e5e5e5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .delete-button {
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            color: #ff6b6b;
+            font-size: 18px;
+            transition: 0.3s;
+        }
+
+        .delete-button:hover {
+            background: none;
+            color: #ff5252;
         }
 
         .preview-tile {
@@ -164,7 +186,7 @@
                 <button onclick="resetTiles()" class="reset-button">初期化</button>
             </div>
             <div class="saved-courses">
-                <h3>保存済みコース</h3>
+                <h3>コースリスト</h3>
                 <div id="savedCoursesList"></div>
             </div>
         </div>
@@ -391,7 +413,10 @@
             }));
 
             const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
-            savedCourses[courseName] = tilePositions;
+            savedCourses[courseName] = {
+                tiles: tilePositions,
+                timestamp: Date.now()
+            };
             localStorage.setItem('rcCourses', JSON.stringify(savedCourses));
 
             updateSavedCoursesList();
@@ -404,17 +429,33 @@
             const listElement = document.getElementById('savedCoursesList');
             listElement.innerHTML = '';
 
-            Object.keys(savedCourses).forEach(courseName => {
+            // 古いデータ構造を新しい形式に変換
+            Object.entries(savedCourses).forEach(([name, data]) => {
+                if (!data.timestamp) {
+                    savedCourses[name] = {
+                        tiles: data,
+                        timestamp: Date.now()
+                    };
+                }
+            });
+
+            // コースを登録順（タイムスタンプ順）にソート
+            const sortedCourses = Object.entries(savedCourses)
+                .sort((a, b) => b[1].timestamp - a[1].timestamp)
+                .map(([name, data]) => ({ name, data }));
+
+            sortedCourses.forEach(({ name: courseName, data }) => {
                 const courseElement = document.createElement('div');
                 courseElement.style.margin = '20px 0';
                
                 // プレビューの作成
                 const previewContainer = document.createElement('div');
                 previewContainer.className = 'course-preview';
+                previewContainer.onclick = () => loadSpecificCourse(courseName);
                 
                 // タイルの位置を計算してプレビューに配置
-                const courseData = savedCourses[courseName];
-                const previewScale = 0.133; // プレビューのスケール（1/7.5）
+                const courseData = data.tiles;
+                const previewScale = 0.133;
                 
                 courseData.forEach(tileData => {
                     const previewTile = document.createElement('div');
@@ -433,21 +474,29 @@
                 });
 
                 courseElement.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                         <span>${courseName}</span>
-                        <button onclick="loadSpecificCourse('${courseName}')" style="margin-left: 10px">読み込み</button>
-                        <button onclick="deleteCourse('${courseName}')" style="margin-left: 10px">削除</button>
+                        <button onclick="deleteCourse('${courseName}')" class="delete-button" title="削除">
+                            <svg width="16" height="16" viewBox="0 0 16 16">
+                                <path fill="currentColor" d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                <path fill="currentColor" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                            </svg>
+                        </button>
                     </div>
                 `;
                 courseElement.appendChild(previewContainer);
                 listElement.appendChild(courseElement);
             });
+
+            // 変換したデータを保存
+            localStorage.setItem('rcCourses', JSON.stringify(savedCourses));
         }
 
         // 特定のコースを読み込む
         function loadSpecificCourse(courseName) {
             const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
-            const courseData = savedCourses[courseName];
+            // 古い形式と新しい形式の両方に対応
+            const courseData = savedCourses[courseName].tiles || savedCourses[courseName];
             
             if (courseData) {
                 const courseArea = document.getElementById('courseArea');
