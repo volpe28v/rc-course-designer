@@ -138,6 +138,26 @@
             flex: 1;
         }
 
+        .add-tile-button {
+            background: rgba(0, 255, 157, 0.2);
+            color: #00ff9d;
+            border: 1px solid rgba(0, 255, 157, 0.3);
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .add-tile-button:hover {
+            background: rgba(0, 255, 157, 0.3);
+            box-shadow: 0 0 10px rgba(0, 255, 157, 0.4);
+        }
+
         .import-button {
             background: rgba(0, 157, 255, 0.2);
             color: #00d9ff;
@@ -457,6 +477,13 @@
                         </svg>
                     </button>
                 </div>
+                <button onclick="addNewTile()" class="add-tile-button">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0-1A6 6 0 1 0 8 2a6 6 0 0 0 0 12z"/>
+                    </svg>
+                    タイルを追加
+                </button>
             </div>
             <div class="saved-courses">
                 <div id="savedCoursesList"></div>
@@ -1058,6 +1085,61 @@
             if (event.target === importModal) {
                 importModal.style.display = 'none';
             }
+        }
+
+        // 新しいタイルを追加
+        function addNewTile() {
+            const courseArea = document.getElementById('courseArea');
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            
+            // 中央付近に配置
+            const centerX = (courseArea.clientWidth / 2) - 60;
+            const centerY = (courseArea.clientHeight / 2) - 45;
+            tile.style.left = `${centerX}px`;
+            tile.style.top = `${centerY}px`;
+            tile.dataset.rotation = '0';
+
+            // ドラッグ開始時の処理
+            tile.addEventListener('mousedown', (e) => {
+                // 既に選択されているタイルをクリックした場合は選択を維持
+                if (!e.ctrlKey && !tile.classList.contains('selected')) {
+                    selectedTiles.clear();
+                    document.querySelectorAll('.tile.selected').forEach(t => {
+                        t.classList.remove('selected');
+                    });
+                }
+                startTime = Date.now();
+                isDragging = false;
+                draggedTile = tile;
+                const pos = getTilePosition(tile, e.clientX, e.clientY);
+                offsetX = pos.x;
+                offsetY = pos.y;
+                tile.classList.add('dragging');
+                tile.classList.add('selected');
+                selectedTiles.add(tile);
+                e.stopPropagation();
+            });
+
+            // クリック時の回転処理
+            tile.addEventListener('click', (e) => {
+                if (!isDragging) {
+                    const currentRotation = parseInt(tile.dataset.rotation) || 0;
+                    const newRotation = (currentRotation + 90) % 360;
+                    tile.style.transform = `rotate(${newRotation}deg)`;
+                    tile.dataset.rotation = newRotation;
+                }
+            });
+
+            courseArea.appendChild(tile);
+            
+            // 新しいタイルを選択状態に
+            selectedTiles.clear();
+            document.querySelectorAll('.tile.selected').forEach(t => {
+                t.classList.remove('selected');
+            });
+            tile.classList.add('selected');
+            selectedTiles.add(tile);
         }
     </script>
 </body>
