@@ -138,6 +138,41 @@
             flex: 1;
         }
 
+        .import-button {
+            background: rgba(0, 157, 255, 0.2);
+            color: #00d9ff;
+            border: 1px solid rgba(0, 157, 255, 0.3);
+        }
+
+        .import-button:hover {
+            background: rgba(0, 157, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 157, 255, 0.4);
+        }
+
+        .textarea-container {
+            display: flex;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        textarea.import-code {
+            width: 100%;
+            height: 120px;
+            background: rgba(10, 10, 15, 0.9);
+            color: #00d9ff;
+            border: 1px solid rgba(0, 157, 255, 0.3);
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            font-size: 14px;
+            
+            @media (max-width: 768px) {
+                height: 100px;
+                font-size: 12px;
+            }
+        }
+
         input[type="text"] {
             padding: 8px;
             border: 1px solid rgba(0,255,157,0.5);
@@ -237,6 +272,108 @@
             color: #c9d1d9;
         }
 
+        .export-button {
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            color: #8b949e;
+            transition: 0.2s;
+            margin-left: 5px;
+        }
+
+        .export-button:hover {
+            background: none;
+            color: #c9d1d9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: rgba(20, 20, 30, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 90%;
+            width: 500px;
+            max-height: 80%;
+            overflow: auto;
+            box-shadow: 0 0 20px rgba(0,255,157,0.3);
+            border: 1px solid rgba(0,255,157,0.3);
+            position: relative;
+            
+            @media (max-width: 768px) {
+                width: 90%;
+                padding: 15px;
+            }
+        }
+
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .close-button:hover {
+            color: #c9d1d9;
+        }
+
+        .code-area {
+            background: rgba(10, 10, 15, 0.9);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid rgba(0,255,157,0.2);
+            color: #00ff9d;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 14px;
+            
+            @media (max-width: 768px) {
+                padding: 10px;
+                font-size: 12px;
+            }
+        }
+
+        .copy-button {
+            background: rgba(0,255,157,0.2);
+            color: #00ff9d;
+            border: 1px solid rgba(0,255,157,0.3);
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+            width: 100%;
+            
+            @media (max-width: 768px) {
+                padding: 8px;
+            }
+        }
+
+        .copy-button:hover {
+            background: rgba(0,255,157,0.3);
+            box-shadow: 0 0 10px rgba(0,255,157,0.4);
+        }
+
         .preview-tile {
             width: 16px;
             height: 12px;
@@ -313,11 +450,41 @@
                 <div class="button-group">
                     <button onclick="saveCourse()">保存</button>
                     <button onclick="resetTiles()" class="reset-button">初期化</button>
+                    <button onclick="showImportModal()" class="import-button" title="コースをインポート">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 3L4 7h2.5v6h3V7H12L8 3z"/>
+                            <path d="M13 13H3v-2H2v3h12v-3h-1v2z"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
             <div class="saved-courses">
                 <div id="savedCoursesList"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- エクスポートモーダル -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <button class="close-button" onclick="closeModal()">×</button>
+            <h3>コースエクスポート</h3>
+            <p>以下のコードをコピーして他の環境でインポートできます：</p>
+            <div id="exportCode" class="code-area"></div>
+            <button class="copy-button" onclick="copyExportCode()">コードをコピー</button>
+        </div>
+    </div>
+
+    <!-- インポートモーダル -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <button class="close-button" onclick="closeImportModal()">×</button>
+            <h3>コースインポート</h3>
+            <p>エクスポートされたコースデータを貼り付けてください：</p>
+            <div class="textarea-container">
+                <textarea id="importCode" class="import-code" placeholder="ここにエクスポートされたJSONデータを貼り付け..."></textarea>
+            </div>
+            <button class="copy-button import-button" onclick="importCourseFromData()">インポート</button>
         </div>
     </div>
 
@@ -614,12 +781,20 @@
                 courseElement.innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                         <span>${courseName}</span>
-                        <button onclick="deleteCourse('${courseName}')" class="delete-button" title="削除">
-                            <svg width="16" height="16" viewBox="0 0 16 16">
-                                <path fill="currentColor" d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                                <path fill="currentColor" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                            </svg>
-                        </button>
+                        <div>
+                            <button onclick="exportCourse('${courseName}')" class="export-button" title="エクスポート">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M8 12l-4-4h2.5V3h3v5H12L8 12z"/>
+                                    <path d="M13 13H3v-2H2v3h12v-3h-1v2z"/>
+                                </svg>
+                            </button>
+                            <button onclick="deleteCourse('${courseName}')" class="delete-button" title="削除">
+                                <svg width="16" height="16" viewBox="0 0 16 16">
+                                    <path fill="currentColor" d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                    <path fill="currentColor" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 `;
                 courseElement.appendChild(previewContainer);
@@ -774,6 +949,116 @@
                 isDragging = false;
             }
         });
+
+        // コースをエクスポート
+        function exportCourse(courseName) {
+            const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
+            const courseData = savedCourses[courseName];
+            
+            if (!courseData) return;
+            
+            // エクスポート用のデータ形式
+            const exportData = {
+                name: courseName,
+                data: courseData
+            };
+            
+            const exportCode = JSON.stringify(exportData, null, 2);
+            
+            document.getElementById('exportCode').textContent = exportCode;
+            document.getElementById('exportModal').style.display = 'flex';
+        }
+        
+        // モーダルを閉じる
+        function closeModal() {
+            document.getElementById('exportModal').style.display = 'none';
+        }
+        
+        // インポートモーダルを表示
+        function showImportModal() {
+            document.getElementById('importCode').value = '';
+            document.getElementById('importModal').style.display = 'flex';
+        }
+        
+        // インポートモーダルを閉じる
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+        
+        // コースデータをインポート
+        function importCourseFromData() {
+            const importText = document.getElementById('importCode').value.trim();
+            
+            if (!importText) {
+                alert('インポートするデータを入力してください');
+                return;
+            }
+            
+            try {
+                // JSONデータをパース
+                const importData = JSON.parse(importText);
+                
+                if (!importData.name || !importData.data) {
+                    throw new Error('無効なコースデータ形式です');
+                }
+                
+                // 既存のコースデータを取得
+                const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
+                
+                // 同名のコースが存在する場合は確認
+                if (savedCourses[importData.name] && !confirm(`"${importData.name}"は既に存在します。上書きしますか？`)) {
+                    return;
+                }
+                
+                // コースを追加
+                savedCourses[importData.name] = importData.data;
+                
+                // 保存
+                localStorage.setItem('rcCourses', JSON.stringify(savedCourses));
+                
+                // リストを更新
+                updateSavedCoursesList();
+                
+                // モーダルを閉じる
+                closeImportModal();
+                
+                // 成功メッセージ
+                alert(`"${importData.name}"をインポートしました！`);
+                
+                // インポートしたコースを読み込む
+                loadSpecificCourse(importData.name);
+                
+            } catch (error) {
+                alert('インポートに失敗しました: ' + error.message);
+            }
+        }
+        
+        // エクスポートコードをコピー
+        function copyExportCode() {
+            const codeElement = document.getElementById('exportCode');
+            const textArea = document.createElement('textarea');
+            textArea.value = codeElement.textContent;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            alert('コードをクリップボードにコピーしました！');
+        }
+        
+        // モーダル外をクリックしたら閉じる
+        window.onclick = function(event) {
+            const exportModal = document.getElementById('exportModal');
+            const importModal = document.getElementById('importModal');
+            
+            if (event.target === exportModal) {
+                exportModal.style.display = 'none';
+            }
+            
+            if (event.target === importModal) {
+                importModal.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html> 
