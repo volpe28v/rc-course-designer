@@ -752,7 +752,6 @@
             localStorage.setItem('rcCourses', JSON.stringify(savedCourses));
 
             updateSavedCoursesList();
-            alert('コースを保存しました');
         }
 
         // 保存済みコースの一覧を更新
@@ -1047,9 +1046,6 @@
                 // モーダルを閉じる
                 closeImportModal();
                 
-                // 成功メッセージ
-                alert(`"${importData.name}"をインポートしました！`);
-                
                 // インポートしたコースを読み込む
                 loadSpecificCourse(importData.name);
                 
@@ -1067,8 +1063,6 @@
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
-            
-            alert('コードをクリップボードにコピーしました！');
         }
         
         // モーダル外をクリックしたら閉じる
