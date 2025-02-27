@@ -889,12 +889,10 @@
 
         // コースの削除
         function deleteCourse(courseName) {
-            if (confirm(`${courseName}を削除してもよろしいですか？`)) {
-                const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
-                delete savedCourses[courseName];
-                localStorage.setItem('rcCourses', JSON.stringify(savedCourses));
-                updateSavedCoursesList();
-            }
+            const savedCourses = JSON.parse(localStorage.getItem('rcCourses') || '{}');
+            delete savedCourses[courseName];
+            localStorage.setItem('rcCourses', JSON.stringify(savedCourses));
+            updateSavedCoursesList();
         }
 
         // タイルを初期位置に戻す
